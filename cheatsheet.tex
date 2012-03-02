@@ -220,6 +220,31 @@ fsm.dbg=rfsmpp.gen_dbgcolor("fsmX",
                               STATE_EXIT=true }, false)
 \end{verbatim}
 
+
+\subsection{Sequential AND state}
+\textbf{Synopsis:}
+\begin{verbatim}
+    seqAND = rfsm.seqand {
+       subfsm1=rfsm.init(rfsm.load("subfsm1.lua")),
+       subfsm2=...
+    }
+\end{verbatim}
+
+\textbf{Fields:}\\
+\begin{itemize}
+\item \texttt{order}: table of substate names that indicate the
+  desired execution order. Not mentioned states are executed last.
+\item \texttt{andseqdbg}: if true print debug info
+\item \texttt{step}: number of steps to advance each time.
+\item \texttt{run}: if true, don't step but \texttt{run}.
+\item \texttt{idle\_doo}: doo flag to be returned by seqand yield.
+\end{itemize}
+
+\textbf{Description:}
+
+Step or run the initialized substates in a serialized manner inside
+the \texttt{doo} function of the seqand state.
+
 \subsection{Example}
 \label{sec:example-1}
 
