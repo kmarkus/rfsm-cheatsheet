@@ -1,0 +1,272 @@
+\documentclass[10pt,landscape]{article}
+ \usepackage{multicol}
+\usepackage{calc}
+\usepackage{ifthen}
+\usepackage[landscape]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb}
+\usepackage{color,graphicx,overpic}
+\usepackage{hyperref}
+\usepackage{fancyvrb}
+\usepackage{url}
+
+\include{pygmentize}
+
+\pdfinfo{
+  /Title (rfsm-cheatsheat.pdf)
+  /Creator (TeX)
+  /Producer (pdfTeX 1.40.0)
+  /Author (Markus Klotzbuecher)
+  /Subject (rFSM cheatsheet)
+  /Keywords (pdflatex, latex,pdftex,tex)}
+
+% This sets page margins to .5 inch if using letter paper, and to 1cm
+% if using A4 paper. (This probably isn't strictly necessary.)
+% If using another size paper, use default 1cm margins.
+\ifthenelse{\lengthtest { \paperwidth = 11in}}
+    { \geometry{top=.5in,left=.5in,right=.5in,bottom=.5in} }
+    {\ifthenelse{ \lengthtest{ \paperwidth = 297mm}}
+        {\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
+        {\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
+    }
+
+% Turn off header and footer
+\pagestyle{empty}
+
+% Redefine section commands to use less space
+\makeatletter
+\renewcommand{\section}{\@startsection{section}{1}{0mm}%
+                                {-1ex plus -.5ex minus -.2ex}%
+                                {0.5ex plus .2ex}%x
+                                {\normalfont\large\bfseries}}
+\renewcommand{\subsection}{\@startsection{subsection}{2}{0mm}%
+                                {-1explus -.5ex minus -.2ex}%
+                                {0.5ex plus .2ex}%
+                                {\normalfont\normalsize\bfseries}}
+\renewcommand{\subsubsection}{\@startsection{subsubsection}{3}{0mm}%
+                                {-1ex plus -.5ex minus -.2ex}%
+                                {1ex plus .2ex}%
+                                {\normalfont\small\bfseries}}
+\makeatother
+
+% Define BibTeX command
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Don't print section numbers
+\setcounter{secnumdepth}{0}
+
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt plus 0.5ex}
+
+%My Environments
+\newtheorem{example}[section]{Example}
+% -----------------------------------------------------------------------
+
+\begin{document}
+\raggedright
+\footnotesize
+\begin{multicols}{3}
+
+
+% multicol parameters
+% These lengths are set only within the two main columns
+%\setlength{\columnseprule}{0.25pt}
+\setlength{\premulticols}{1pt}
+\setlength{\postmulticols}{1pt}
+\setlength{\multicolsep}{1pt}
+\setlength{\columnsep}{2pt}
+
+\begin{center}
+     \Large{\underline{rFSM Cheatsheet}}\\
+     \small{(beta5)} \\
+\end{center}
+
+\section{Specifying rFSM Models}
+
+\textbf{Synopsis:}\\
+\begin{verbatim}
+    return rfsm.state {
+       ...
+    }
+\end{verbatim}
+
+\textbf{Decription:} 
+
+A rFSM model is contained in a file that returns the toplevel model in
+a state.
+
+\subsection{Toplevel FSM Configuration}
+
+The fields may defined at the root of an fsm:␘
+
+\begin{itemize}
+\item \texttt{\texttt{getevents()}}: function that will be executed
+  during step/run and must return a table of events (index part only).
+\item \texttt{dbg}, \texttt{info}, \texttt{err}: log functions. Must
+  takes multiple arguments and log them.
+\end{itemize}
+
+
+%%% States
+\subsection{States}
+
+\textbf{Synopsis:}\\
+\begin{verbatim}
+    rfsm.state{
+       entry=function() do_this() end
+       exit=function() do_that() end,
+    
+       substate1=rfsm.state{...}, 
+       ...
+       transition{...}
+       ...
+    }
+\end{verbatim}
+
+
+\textbf{Fields:}\\
+\begin{itemize}
+\item \texttt{entry(fsm, state, 'entry'}: entry function 
+\item \texttt{exit(fsm, state, 'exit'}: entry function 
+\item \texttt{doo(fsm, state, 'doo'}: doo function/coroutine (only permited for leaf states)
+\end{itemize}
+
+
+\textbf{Description:}\\
+The \texttt{state} is the basic building block. If a state has
+substates it is called a \textbf{composite state}. Otherwise it is
+called a \textbf{leaf state}.\\ 
+
+\subsection{Transitions}
+
+\textbf{Synopsis:}\\
+
+\begin{verbatim}
+    rfsm.transition{ src=''stateX'',
+                     tgt=''stateY'',
+                     events={...}},
+    rfsm.trans{ ... } -- short form
+\end{verbatim}
+
+
+\textbf{Fields}:\\
+\begin{itemize}
+\item \texttt{src=<state-ref>}:source state reference
+\item \texttt{tgt=<state-ref>}: target state reference
+\item \texttt{events=\{event1, event2, ...\} }: list of triggering events
+\item \texttt{guard }: guard function. Stateless function that returns \texttt{true} or \texttt{false}.
+\item \texttt{pn=<number>}: Priority number. Transitions with larger
+  numbers take priority in case of conflicting transitions.
+\end{itemize}
+
+\subsection{Connectors}
+\label{sec:connectors}
+
+\textbf{Synopsis:}\\
+\begin{verbatim}
+    rfsm.connector{}
+    rfsm.conn{} -- short form
+\end{verbatim}
+
+\textbf{Fields}: none.
+
+\textbf{Description:}\\
+
+Connectors can be used to build composite transitions by chaining
+multiple connectors, or for defining different entry and exit points
+of composite states. 
+
+
+\section{Loading and Instatiating rFSM Models}
+\label{sec:running-rfsm}
+
+\begin{itemize}
+\item \texttt{model=rfsm.load(filename)} Load a rFSM Model from a file
+\item \texttt{rfsm.init(model)} Instatiate and validate a rFSM model
+\end{itemize}
+
+
+\section{Running rFSM instances}
+\label{sec:runn-rfsm-inst}
+
+\begin{itemize}
+\item \texttt{rfsm.step(fsm)}: \texttt{step} a rFSM instance. This
+  will execute at most one transition or one doo cycle.
+
+\item \texttt{rfsm.step(fsm, N)}: \texttt{step} as above, but will
+  perform at most \texttt{N} transitions or doo cycles.
+
+\item \texttt{rfsm.run(fsm)} will run step until there are no new
+  events and no active \texttt{doo} function.
+
+\item \texttt{rfsm.send\_events(fsm, event1, event2, \dots)}: send events
+  to the internal fsm queue. Mostly used for debugging. Normally the
+  \texttt{getevents} hook shall be preferred.
+\end{itemize}
+
+\section{Miscellaneous}
+\label{sec:miscellaneous}
+
+\subsection{Tracing}
+\label{sec:debugging}
+
+Enable state entry and exit debug messages:
+
+\begin{verbatim}
+require "rfsmpp"
+fsm.dbg=rfsmpp.gen_dbgcolor("fsmX", 
+                            { STATE_ENTER=true,
+                              STATE_EXIT=true }, false)
+\end{verbatim}
+
+\subsection{Example}
+\label{sec:example-1}
+
+\begin{verbatim}
+local state, trans, conn = rfsm.state, rfsm.conn, rfsm.trans
+
+return rfsm.state {
+   dbg=rfsmpp.gen_dbgcolor("sample-fsm",
+                            { STATE_ENTER=true,
+                              STATE_EXIT=true }, false),
+   entry=function() enable_robot() end,
+   entry=function() disable_robot() end,
+
+   stopped = state {},
+
+   moving = state {
+      entry=function() start_motor() end,
+      exit=function() stop_motor() end,
+      
+      doo = function()
+        while true do
+           compute_next_pos()
+           rfsm.yield(true)
+        end,
+   }
+
+   trans{ src="initial", tgt="stopped" },
+   trans{ src="stopped", tgt="moving", events={"e_start"} },
+   trans{ src="moving", tgt="stopped", events={"e_stop"} },
+}
+\end{verbatim}
+
+\subsection{Links}
+\label{sec:links}
+
+\url{www.orocos.org/rfsm}
+\url{http://www.orocos.org/wiki/orocos/toolchain/LuaCookbook}
+
+% You can even have references
+\rule{0.3\linewidth}{0.25pt}
+\scriptsize
+\bibliographystyle{abstract}
+\bibliography{refFile}
+\end{multicols}
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 
