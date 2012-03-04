@@ -116,14 +116,12 @@ States are the principle building block of rFSM Statecharts.
 \subsubsection{Synopsis}
 
 \begin{verbatim}
-    rfsm.state{
-       entry=function() do_this() end
+    rfsm.state {
+       entry=function() do_this() end,
        exit=function() do_that() end,
 
-       substate1=rfsm.state{...},
-       ...
-       transition{...}
-       ...
+       substate1=rfsm.state{...}, ...
+       transition{...} ...
     }
 \end{verbatim}
 
@@ -140,8 +138,9 @@ States are the principle building block of rFSM Statecharts.
 
 States model distinguishable conditions and encapsulate behavior. If a
 state has substates it is called a \textbf{composite state}. Otherwise
-it is called a \textbf{leaf state}. An active rFSM instance is always
-in a leaf-state!
+it is called a \textbf{leaf state}. If a transition ends on a
+composite state, this state must define an initial
+transition. \textbf{Common error:} don't forget the commas \dots
 
 \subsection{Transitions}
 
@@ -192,12 +191,14 @@ nested states by parent states using the relative notation.
 Connectors can be used to build composite transitions by chaining
 multiple connectors, or for defining different entry and exit points
 of composite states. \textit{Note:} connectors only permit to build
-more sophisticated transitions, the FSM is \textit{never} in the
-connector!
+more sophisticated transitions, the connector is \textit{never}
+active!
 
 \section{Loading, Instatiating and Advancing}
 
 \subsection{Loading and Instatiating}
+
+\subsubsection{Synopsis}
 
 \begin{itemize}
 \item \texttt{model=rfsm.load(filename)} Load a rFSM Model from a file.
@@ -223,6 +224,8 @@ transitions starting from \texttt{root} state to active
 leaf. \textbf{3.} If enabled transition found $\rightarrow$
 execute. \textbf{4.} elseif active \texttt{doo} $\rightarrow$ run
 it. \textbf{5.} discard current events.
+
+After each \texttt{step} exactly one leaf-state will be active.
 
 \section{Miscellaneous}
 \label{sec:miscellaneous}
@@ -263,7 +266,6 @@ set. This function returns two values: current seconds and current
 nanoseconds. Available functions: \texttt{rtp.clock\_gettime} (from
 the rtp module, see Links), \texttt{rtt.getTime} from RTT-Lua, or for
 second resolution events the Lua built-in:
-
 \begin{verbatim}
 function gettime() return os.time(), 0 end
 \end{verbatim}
