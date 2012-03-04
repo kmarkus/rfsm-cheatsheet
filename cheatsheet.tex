@@ -17,7 +17,7 @@
   /Producer (pdfTeX 1.40.0)
   /Author (Markus Klotzbuecher)
   /Subject (rFSM cheatsheet)
-  /Keywords (pdflatex, latex,pdftex,tex)}
+  /Keywords (rfsm, statecharts, cheatsheet, lua)}
 
 % This sets page margins to .5 inch if using letter paper, and to 1cm
 % if using A4 paper. (This probably isn't strictly necessary.)
@@ -84,14 +84,14 @@
 
 \section{Specifying rFSM Models}
 
-\textbf{Synopsis:}\\
+\subsubsection{Synopsis}
 \begin{verbatim}
     return rfsm.state {
        ...
     }
 \end{verbatim}
 
-\textbf{Decription:}
+\subsubsection{Decription}
 
 A rFSM model is contained in a file that returns the toplevel state.
 
@@ -113,7 +113,8 @@ The following fields may defined in the toplevel state:
 
 States are the principle building block of rFSM Statecharts.
 
-\textbf{Synopsis:}\\
+\subsubsection{Synopsis}
+
 \begin{verbatim}
     rfsm.state{
        entry=function() do_this() end
@@ -126,8 +127,8 @@ States are the principle building block of rFSM Statecharts.
     }
 \end{verbatim}
 
+\subsubsection{Fields}
 
-\textbf{Fields:}\\
 \begin{itemize}
 \item \texttt{entry(fsm, state, 'entry'}: entry function
 \item \texttt{exit(fsm, state, 'exit'}: entry function
@@ -135,17 +136,18 @@ States are the principle building block of rFSM Statecharts.
 \end{itemize}
 
 
-\textbf{Description:}\\
+\subsubsection{Description}
+
 States model distinguishable conditions and encapsulate behavior. If a
 state has substates it is called a \textbf{composite state}. Otherwise
-it is
-called a \textbf{leaf state}.\\
+it is called a \textbf{leaf state}. An active rFSM instance is always
+in a leaf-state!
 
 \subsection{Transitions}
 
 Transition connect states.
 
-\textbf{Synopsis:}\\
+\subsubsection{Synopsis}
 
 \begin{verbatim}
     rfsm.transition{ src=''stateX'', tgt=''stateY'',
@@ -153,12 +155,13 @@ Transition connect states.
     rfsm.trans{ ... } -- short form
 \end{verbatim}
 
-\textbf{Fields}:\\
+\subsubsection{Fields}
+
 \begin{itemize}
 \item \texttt{src=<state-ref>}: source state reference
 \item \texttt{tgt=<state-ref>}: target state reference
-\item \texttt{events=\{event1, event2, ...\} }: list of triggering
-  events.
+\item \texttt{events=\{event1, event2, ...\} }: list of events of
+  which each may trigger the transition (\texttt{or}).
 \item \texttt{guard}: side-effect free function that returns
   \texttt{true} or \texttt{false}. If false will inhibit transition.
 \item \texttt{effect}: function that is execute when transition is taken.
@@ -166,55 +169,60 @@ Transition connect states.
   numbers take priority in case of conflicting transitions.
 \end{itemize}
 
+
+\subsubsection{Description}
+
+Transitions define how the FSM changes state when events are received.
 \texttt{<state-ref>} can be \textit{absolute} ``root.s1.s2'',
 \textit{local} ``s1'' or \textit{relative} (``.subst1.subst2'').
-
-\textbf{Description:}
-Transitions define how the fsm changes state.
+Transitions may cross state boundaries or be layered on top of deeper
+nested states by parent states using the relative notation.
 
 \subsection{Connectors}
 \label{sec:connectors}
 
-\textbf{Synopsis:}\\
+\subsubsection{Synopsis}
 \begin{verbatim}
     rfsm.connector{}
     rfsm.conn{} -- short form
 \end{verbatim}
 
-\textbf{Fields}: none.
-
-\textbf{Description:}\\
+\subsubsection{Description}
 
 Connectors can be used to build composite transitions by chaining
 multiple connectors, or for defining different entry and exit points
-of composite states.
+of composite states. \textit{Note:} connectors only permit to build
+more sophisticated transitions, the FSM is \textit{never} in the
+connector!
 
-\section{Loading and Instatiating rFSM Models}
-\label{sec:running-rfsm}
+\section{Loading, Instatiating and Advancing}
+
+\subsection{Loading and Instatiating}
 
 \begin{itemize}
-\item \texttt{model=rfsm.load(filename)} Load a rFSM Model from a file
+\item \texttt{model=rfsm.load(filename)} Load a rFSM Model from a file.
 \item \texttt{rfsm.init(model)} Instatiate and validate a rFSM model
 \end{itemize}
 
+\subsection{Advancing rFSM instances}
 
-\section{Running rFSM instances}
-\label{sec:runn-rfsm-inst}
+\subsubsection{Synopsis}
 
 \begin{itemize}
-\item \texttt{rfsm.step(fsm)}: \texttt{step} a rFSM instance. This
-  will execute at most one transition or one doo cycle.
-
-\item \texttt{rfsm.step(fsm, N)}: \texttt{step} as above, but will
-  perform at most \texttt{N} transitions or doo cycles.
-
-\item \texttt{rfsm.run(fsm)} will run step until there are no new
-  events and no active \texttt{doo} function.
-
-\item \texttt{rfsm.send\_events(fsm, event1, event2, \dots)}: send events
-  to the internal fsm queue. Mostly used for debugging. Normally the
-  \texttt{getevents} hook shall be preferred.
+\item \texttt{rfsm.step(fsm)}: \texttt{step} a rFSM instance. This will execute at most one transition or one doo cycle.
+\item \texttt{rfsm.step(fsm, N)}: \texttt{step} as above, but will perform at most \texttt{N} transitions or doo cycles.
+\item \texttt{rfsm.run(fsm)} will run step until there are no new events and no active \texttt{doo} function.
+\item \texttt{rfsm.send\_events(fsm, event1, event2, \dots)}: send events to the internal fsm queue.
 \end{itemize}
+
+\subsubsection{Description}
+
+The basic step consists of the following: \textbf{1.} retrieve new
+events using \texttt{getevents} hook. \textbf{2.} Find enabled
+transitions starting from \texttt{root} state to active
+leaf. \textbf{3.} If enabled transition found $\rightarrow$
+execute. \textbf{4.} elseif active \texttt{doo} $\rightarrow$ run
+it. \textbf{5.} discard current events.
 
 \section{Miscellaneous}
 \label{sec:miscellaneous}
@@ -230,6 +238,12 @@ fsm.dbg=rfsmpp.gen_dbgcolor("fsmX",
                             { STATE_ENTER=true,
                               STATE_EXIT=true }, false)
 \end{verbatim}
+\medskip
+Most important debug IDs are:
+\begin{verbatim}
+STATE_ENTER, STATE_EXIT, EFFECT, DOO, EXEC_PATH, 
+ERROR, HIBERNATING, RAISED, TIMEEVENT
+\end{verbatim}
 
 \subsection{Time Events}
 
@@ -242,7 +256,7 @@ return rfsm.state {
 }
 \end{verbatim}
 
-\textbf{Description:}\\
+\subsubsection{Description}
 The \texttt{rfsm\_timeevent} module enables relative time
 events. After loading, a suitable \texttt{gettime} function must be
 set. This function returns two values: current seconds and current
@@ -258,7 +272,9 @@ function gettime() return os.time(), 0 end
 components.
 
 \subsection{Sequential AND state}
-\textbf{Synopsis:}
+
+\subsubsection{Synopsis}
+
 \begin{verbatim}
     seqAND = rfsm.seqand {
        subfsm1=rfsm.init(rfsm.load("subfsm1.lua")),
@@ -266,27 +282,25 @@ components.
     }
 \end{verbatim}
 
-\textbf{Fields:}\\
+\subsubsection{Fields}
+
 \begin{itemize}
-\item \texttt{order}: table of substate names that indicate the
-  desired execution order. Not mentioned states are executed last.
+\item \texttt{order}: table of substate names that indicate the desired execution order. Not mentioned states are executed last.
 \item \texttt{andseqdbg}: if true print debug info
 \item \texttt{step}: number of steps to advance each time.
 \item \texttt{run}: if true, don't step but \texttt{run}.
 \item \texttt{idle\_doo}: doo flag to be returned by seqand yield.
 \end{itemize}
 
-\textbf{Description:}
+\subsubsection{Description}
+Specialized state that \texttt{step}'s or \texttt{run}'s the
+initialized substates in a serialized manner inside the \texttt{doo}
+function of the seqand state.
 
-Step or run the initialized substates in a serialized manner inside
-the \texttt{doo} function of the seqand state.
-
-\subsection{Example}
-\label{sec:example-1}
+\subsection{Complete Example}
 
 \begin{verbatim}
 local state, trans, conn = rfsm.state, rfsm.conn, rfsm.trans
-
 return rfsm.state {
    dbg=rfsmpp.gen_dbgcolor("sample-fsm")
    entry=function() enable_robot() end,
@@ -304,7 +318,6 @@ return rfsm.state {
            rfsm.yield(true)
         end,
    }
-
    trans{ src="initial", tgt="stopped" },
    trans{ src="stopped", tgt="moving", events={"e_start"} },
    trans{ src="moving", tgt="stopped", events={"e_stop"} },
@@ -317,6 +330,7 @@ return rfsm.state {
 \url{www.orocos.org/rfsm}
 \url{http://www.orocos.org/wiki/orocos/toolchain/LuaCookbook}
 \url{https://github.com/kmarkus/rtp}
+
 % You can even have references
 \rule{0.3\linewidth}{0.25pt}
 \scriptsize
