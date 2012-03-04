@@ -37,15 +37,15 @@
 \renewcommand{\section}{\@startsection{section}{1}{0mm}%
                                 {-1ex plus -.5ex minus -.2ex}%
                                 {0.5ex plus .2ex}%x
-                                {\normalfont\large\bfseries}}
+                                {\normalfont\normalsize\bfseries}}
 \renewcommand{\subsection}{\@startsection{subsection}{2}{0mm}%
                                 {-1explus -.5ex minus -.2ex}%
                                 {0.5ex plus .2ex}%
-                                {\normalfont\normalsize\bfseries}}
+                                {\normalfont\small\bfseries}}
 \renewcommand{\subsubsection}{\@startsection{subsubsection}{3}{0mm}%
                                 {-1ex plus -.5ex minus -.2ex}%
                                 {1ex plus .2ex}%
-                                {\normalfont\small\bfseries}}
+                                {\normalfont\footnotesize\bfseries}}
 \makeatother
 
 % Define BibTeX command
@@ -65,7 +65,7 @@
 
 \begin{document}
 \raggedright
-\footnotesize
+\scriptsize
 \begin{multicols}{3}
 
 
@@ -91,33 +91,35 @@
     }
 \end{verbatim}
 
-\textbf{Decription:} 
+\textbf{Decription:}
 
-A rFSM model is contained in a file that returns the toplevel model in
-a state.
+A rFSM model is contained in a file that returns the toplevel state.
 
 \subsection{Toplevel FSM Configuration}
 
-The fields may defined at the root of an fsm:␘
+The following fields may defined in the toplevel state:
 
 \begin{itemize}
 \item \texttt{\texttt{getevents()}}: function that will be executed
-  during step/run and must return a table of events (index part only).
+  during step/run and must return a table of new events (index part
+  only).
 \item \texttt{dbg}, \texttt{info}, \texttt{err}: log functions. Must
-  takes multiple arguments and log them.
+  accept multiple parameters to log.
 \end{itemize}
 
 
 %%% States
 \subsection{States}
 
+States are the principle building block of rFSM Statecharts.
+
 \textbf{Synopsis:}\\
 \begin{verbatim}
     rfsm.state{
        entry=function() do_this() end
        exit=function() do_that() end,
-    
-       substate1=rfsm.state{...}, 
+
+       substate1=rfsm.state{...},
        ...
        transition{...}
        ...
@@ -127,38 +129,48 @@ The fields may defined at the root of an fsm:␘
 
 \textbf{Fields:}\\
 \begin{itemize}
-\item \texttt{entry(fsm, state, 'entry'}: entry function 
-\item \texttt{exit(fsm, state, 'exit'}: entry function 
+\item \texttt{entry(fsm, state, 'entry'}: entry function
+\item \texttt{exit(fsm, state, 'exit'}: entry function
 \item \texttt{doo(fsm, state, 'doo'}: doo function/coroutine (only permited for leaf states)
 \end{itemize}
 
 
 \textbf{Description:}\\
-The \texttt{state} is the basic building block. If a state has
-substates it is called a \textbf{composite state}. Otherwise it is
-called a \textbf{leaf state}.\\ 
+States model distinguishable conditions and encapsulate behavior. If a
+state has substates it is called a \textbf{composite state}. Otherwise
+it is
+called a \textbf{leaf state}.\\
 
 \subsection{Transitions}
+
+Transition connect states.
 
 \textbf{Synopsis:}\\
 
 \begin{verbatim}
-    rfsm.transition{ src=''stateX'',
-                     tgt=''stateY'',
-                     events={...}},
+    rfsm.transition{ src=''stateX'', tgt=''stateY'',
+                     events={"e_1", "e_2"} }
     rfsm.trans{ ... } -- short form
 \end{verbatim}
 
-
 \textbf{Fields}:\\
 \begin{itemize}
-\item \texttt{src=<state-ref>}:source state reference
+\item \texttt{src=<state-ref>}: source state reference
 \item \texttt{tgt=<state-ref>}: target state reference
-\item \texttt{events=\{event1, event2, ...\} }: list of triggering events
-\item \texttt{guard }: guard function. Stateless function that returns \texttt{true} or \texttt{false}.
+\item \texttt{events=\{event1, event2, ...\} }: list of triggering
+  events.
+\item \texttt{guard}: side-effect free function that returns
+  \texttt{true} or \texttt{false}. If false will inhibit transition.
+\item \texttt{effect}: function that is execute when transition is taken.
 \item \texttt{pn=<number>}: Priority number. Transitions with larger
   numbers take priority in case of conflicting transitions.
 \end{itemize}
+
+\texttt{<state-ref>} can be \textit{absolute} ``root.s1.s2'',
+\textit{local} ``s1'' or \textit{relative} (``.subst1.subst2'').
+
+\textbf{Description:}
+Transitions define how the fsm changes state.
 
 \subsection{Connectors}
 \label{sec:connectors}
@@ -175,8 +187,7 @@ called a \textbf{leaf state}.\\
 
 Connectors can be used to build composite transitions by chaining
 multiple connectors, or for defining different entry and exit points
-of composite states. 
-
+of composite states.
 
 \section{Loading and Instatiating rFSM Models}
 \label{sec:running-rfsm}
@@ -215,11 +226,36 @@ Enable state entry and exit debug messages:
 
 \begin{verbatim}
 require "rfsmpp"
-fsm.dbg=rfsmpp.gen_dbgcolor("fsmX", 
+fsm.dbg=rfsmpp.gen_dbgcolor("fsmX",
                             { STATE_ENTER=true,
                               STATE_EXIT=true }, false)
 \end{verbatim}
 
+\subsection{Time Events}
+
+\begin{verbatim}
+require "rfsm_timeevent
+rfsm_timeevent.set_gettime_hook(gettime_func)
+return rfsm.state {
+   trans{ src="sA", tgt="sB", events={ "e_after(3)"} },
+   ...
+}
+\end{verbatim}
+
+\textbf{Description:}\\
+The \texttt{rfsm\_timeevent} module enables relative time
+events. After loading, a suitable \texttt{gettime} function must be
+set. This function returns two values: current seconds and current
+nanoseconds. Available functions: \texttt{rtp.clock\_gettime} (from
+the rtp module, see Links), \texttt{rtt.getTime} from RTT-Lua, or for
+second resolution events the Lua built-in:
+
+\begin{verbatim}
+function gettime() return os.time(), 0 end
+\end{verbatim}
+
+\textit{Note:} These timeevents only work for periodically triggered
+components.
 
 \subsection{Sequential AND state}
 \textbf{Synopsis:}
@@ -252,18 +288,16 @@ the \texttt{doo} function of the seqand state.
 local state, trans, conn = rfsm.state, rfsm.conn, rfsm.trans
 
 return rfsm.state {
-   dbg=rfsmpp.gen_dbgcolor("sample-fsm",
-                            { STATE_ENTER=true,
-                              STATE_EXIT=true }, false),
+   dbg=rfsmpp.gen_dbgcolor("sample-fsm")
    entry=function() enable_robot() end,
    entry=function() disable_robot() end,
 
-   stopped = state {},
+   stopped = state{},
 
    moving = state {
       entry=function() start_motor() end,
       exit=function() stop_motor() end,
-      
+
       doo = function()
         while true do
            compute_next_pos()
@@ -282,7 +316,7 @@ return rfsm.state {
 
 \url{www.orocos.org/rfsm}
 \url{http://www.orocos.org/wiki/orocos/toolchain/LuaCookbook}
-
+\url{https://github.com/kmarkus/rtp}
 % You can even have references
 \rule{0.3\linewidth}{0.25pt}
 \scriptsize
@@ -291,7 +325,7 @@ return rfsm.state {
 \end{multicols}
 \end{document}
 
-%%% Local Variables: 
+%%% Local Variables:
 %%% mode: latex
 %%% TeX-master: t
-%%% End: 
+%%% End:
