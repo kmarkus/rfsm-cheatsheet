@@ -8,13 +8,12 @@
 \usepackage{hyperref}
 \usepackage{fancyvrb}
 \usepackage{url}
-
-\include{pygmentize}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.2em}
 
 \pdfinfo{
-  /Title (rfsm-cheatsheat.pdf)
+  /Title (rFSM cheatsheet)
   /Creator (TeX)
-  /Producer (pdfTeX 1.40.0)
   /Author (Markus Klotzbuecher)
   /Subject (rFSM cheatsheet)
   /Keywords (rfsm, statecharts, cheatsheet, lua)}
@@ -23,10 +22,10 @@
 % if using A4 paper. (This probably isn't strictly necessary.)
 % If using another size paper, use default 1cm margins.
 \ifthenelse{\lengthtest { \paperwidth = 11in}}
-    { \geometry{top=.5in,left=.5in,right=.5in,bottom=.5in} }
+    { \geometry{top=.3in,left=.3in,right=.3in,bottom=.3in} }
     {\ifthenelse{ \lengthtest{ \paperwidth = 297mm}}
-        {\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
-        {\geometry{top=1cm,left=1cm,right=1cm,bottom=1cm} }
+        {\geometry{top=.7cm,left=.7cm,right=.7cm,bottom=.7cm} }
+        {\geometry{top=.7cm,left=.7cm,right=.7cm,bottom=.7cm} }
     }
 
 % Turn off header and footer
@@ -43,8 +42,8 @@
                                 {0.5ex plus .2ex}%
                                 {\normalfont\small\bfseries}}
 \renewcommand{\subsubsection}{\@startsection{subsubsection}{3}{0mm}%
-                                {-1ex plus -.5ex minus -.2ex}%
-                                {1ex plus .2ex}%
+                                {-.5ex plus -.2ex minus -.1ex}%
+                                {.3ex}%
                                 {\normalfont\footnotesize\bfseries}}
 \makeatother
 
@@ -79,41 +78,43 @@
 
 \begin{center}
      \Large{\underline{rFSM Cheatsheet}}\\
-     \small{(beta5)} \\
+     \small{\url{https://github.com/kmarkus/rFSM}}
 \end{center}
 
 \section{Specifying rFSM Models}
 
-\subsubsection{Synopsis}
 \begin{verbatim}
+    local rfsm = require("rfsm")
     return rfsm.state {
        ...
     }
 \end{verbatim}
 
-\subsubsection{Decription}
+\subsubsection{Description}
 
 A rFSM model is contained in a file that returns the toplevel state.
+\texttt{LUA\_PATH} must contain \texttt{rFSM/src/?.lua} and
+\texttt{rFSM/src/?/init.lua}.
 
 \subsection{Toplevel rFSM Configuration}
 
-The following fields may defined in the toplevel state:
+The following fields may be defined in the toplevel state:
 
 \begin{itemize}
-\item \texttt{\texttt{getevents()}}: function that will be executed
+\item \texttt{getevents()}: function that will be executed
   during step/run and must return a table of new events (index part
   only).
-\item \texttt{dbg}, \texttt{info}, \texttt{err}: log functions. Must
-  accept multiple parameters to log.
+\item \texttt{dbg}, \texttt{info}, \texttt{warn}, \texttt{err}: log
+  functions. Must accept multiple parameters to log. \texttt{false}
+  disables. Defaults: \texttt{dbg} off, \texttt{info} stdout,
+  \texttt{warn} and \texttt{err} stderr.
 \end{itemize}
 
 
 %%% States
 \subsection{States}
 
-States are the principle building block of rFSM Statecharts.
-
-\subsubsection{Synopsis}
+States are the principal building block of rFSM Statecharts.
 
 \begin{verbatim}
     rfsm.state {
@@ -121,18 +122,18 @@ States are the principle building block of rFSM Statecharts.
        exit=function() do_that() end,
 
        substate1=rfsm.state{...}, ...
-       transition{...} ...
+       rfsm.trans{...}, ...
     }
 \end{verbatim}
 
 \subsubsection{Fields}
 
 \begin{itemize}
-\item \texttt{entry(fsm, state, 'entry'}: entry function
-\item \texttt{exit(fsm, state, 'exit'}: entry function
-\item \texttt{doo(fsm, state, 'doo'}: doo function/coroutine (only permited for leaf states)
+\item \texttt{entry(fsm, state, 'entry')}: entry function
+\item \texttt{exit(fsm, state, 'exit')}: exit function
+\item \texttt{doo(fsm, state, 'doo')}: doo function/coroutine (only
+  permitted for leaf states)
 \end{itemize}
-
 
 \subsubsection{Description}
 
@@ -140,16 +141,23 @@ States model distinguishable conditions and encapsulate behavior. If a
 state has substates it is called a \textbf{composite state}. Otherwise
 it is called a \textbf{leaf state}. If a transition ends on a
 composite state, this state must define an initial
-transition. \textbf{Common error:} forgetting the commas.
+transition. \texttt{sista\{\}} and \texttt{csta\{\}} are aliases of
+\texttt{state\{\}}. \textbf{Common error:} forgetting the commas.
+
+\subsubsection{The doo function}
+
+A plain \texttt{doo} runs once, then the completion event
+\texttt{e\_done} is raised. A long running \texttt{doo} must call
+\texttt{rfsm.yield(idle)} regularly to let transitions fire:
+\texttt{true} lets the fsm go idle, \texttt{false} (default) calls
+\texttt{doo} again in a tight loop.
 
 \subsection{Transitions}
 
-Transition connect states.
-
-\subsubsection{Synopsis}
+Transitions connect states.
 
 \begin{verbatim}
-    rfsm.transition{ src=''stateX'', tgt=''stateY'',
+    rfsm.transition{ src="stateX", tgt="stateY",
                      events={"e_1", "e_2"} }
     rfsm.trans{ ... } -- short form
 \end{verbatim}
@@ -163,11 +171,11 @@ Transition connect states.
   which each may trigger the transition (\texttt{or}).
 \item \texttt{guard}: side-effect free function that returns
   \texttt{true} or \texttt{false}. If false will inhibit transition.
-\item \texttt{effect}: function that is execute when transition is taken.
+\item \texttt{effect}: function that is executed when the transition
+  is taken.
 \item \texttt{pn=<number>}: Priority number. Transitions with larger
   numbers take priority in case of conflicting transitions.
 \end{itemize}
-
 
 \subsubsection{Description}
 
@@ -180,7 +188,6 @@ nested states by parent states using the relative notation.
 \subsection{Connectors}
 \label{sec:connectors}
 
-\subsubsection{Synopsis}
 \begin{verbatim}
     rfsm.connector{}
     rfsm.conn{} -- short form
@@ -188,32 +195,34 @@ nested states by parent states using the relative notation.
 
 \subsubsection{Description}
 
-Connectors can be used to build composite transitions by chaining
-multiple connectors, or for defining different entry and exit points
-of composite states. \textit{Note:} connectors only permit to build
-more sophisticated transitions, the connector is \textit{never}
-active!
+Connectors chain transitions into composite transitions or define
+different entry and exit points of composite states. A connector is
+\textit{never} active.
 
 \section{Loading, Instantiating and Advancing}
 
 \subsection{Loading and Instantiating}
 
-\subsubsection{Synopsis}
-
 \begin{itemize}
-\item \texttt{model=rfsm.load(filename)} Load a rFSM Model from a file.
-\item \texttt{rfsm.init(model)} instantiate and validate a rFSM model
+\item \texttt{model=rfsm.load(filename)}: load a rFSM model from a file.
+\item \texttt{model=rfsm.load\_str(str[, name])}: load a model from a
+  string.
+\item \texttt{fsm=rfsm.init(model)}: instantiate and validate a rFSM
+  model. Returns \texttt{false} on error.
 \end{itemize}
 
 \subsection{Advancing rFSM instances}
 
-\subsubsection{Synopsis}
-
 \begin{itemize}
-\item \texttt{rfsm.step(fsm)}: \texttt{step} a rFSM instance. This will execute at most one transition or one doo cycle.
-\item \texttt{rfsm.step(fsm, N)}: \texttt{step} as above, but will perform at most \texttt{N} transitions or doo cycles.
-\item \texttt{rfsm.run(fsm)} will run step until there are no new events and no active \texttt{doo} function.
-\item \texttt{rfsm.send\_events(fsm, event1, event2, \dots)}: send events to the internal fsm queue.
+\item \texttt{idle=rfsm.step(fsm[, N])}: \texttt{step} a rFSM
+  instance. Executes at most \texttt{N} (default 1) transitions or doo
+  cycles. Returns \texttt{true} if the fsm is idle.
+\item \texttt{rfsm.run(fsm)}: step until there are no new events and
+  no active \texttt{doo} function.
+\item \texttt{rfsm.send\_events(fsm, event1, event2, \dots)}: send
+  events to the internal fsm queue.
+\item \texttt{rfsm.reset(fsm)}: reset to the inactive state; it is
+  re-entered on the next step.
 \end{itemize}
 
 \subsubsection{Description}
@@ -228,58 +237,83 @@ it. \textbf{5.} discard current events.
 After each \texttt{step} exactly \textbf{one} leaf-state will be
 active.
 
-\section{Miscellaneous}
-\label{sec:miscellaneous}
+\subsection{Inspecting}
 
-\subsection{Tracing}
+\begin{itemize}
+\item \texttt{rfsm.get\_actleaf\_fqn(fsm)}: fqn of the active leaf
+  state (or \texttt{nil})
+\item \texttt{rfsm.get\_active\_conf(fsm)}: list of active state fqns
+  from root down to the leaf
+\end{itemize}
+
+\section{Extensions}
+\label{sec:extensions}
+
+Extensions are enabled by \texttt{require}-ing them alongside the model.
+
+\subsection{Tracing: \texttt{rfsm.pp}}
 \label{sec:debugging}
 
 Enable state entry and exit debug messages:
 
 \begin{verbatim}
-require "rfsmpp"
-fsm.dbg=rfsmpp.gen_dbgcolor("fsmX",
-                            { STATE_ENTER=true,
-                              STATE_EXIT=true }, false)
+local pp = require("rfsm.pp")
+fsm.dbg = pp.gen_dbgcolor("fsmX",
+                          { STATE_ENTER=true,
+                            STATE_EXIT=true }, false)
 \end{verbatim}
 \medskip
 Most important debug IDs are:
 \begin{verbatim}
-STATE_ENTER, STATE_EXIT, EFFECT, DOO, EXEC_PATH, 
+STATE_ENTER, STATE_EXIT, EFFECT, DOO, EXEC_PATH,
 ERROR, HIBERNATING, RAISED, TIMEEVENT
 \end{verbatim}
 
-\subsection{Time Events}
+\subsection{Time Events: \texttt{rfsm.timeevent}}
 
 \begin{verbatim}
-require "rfsm_timeevent
-rfsm_timeevent.set_gettime_hook(gettime_func)
+local timeevent = require("rfsm.timeevent")
+timeevent.set_gettime_hook(gettime)
 return rfsm.state {
-   trans{ src="sA", tgt="sB", events={ "e_after(3)"} },
+   trans{ src="sA", tgt="sB",
+          events={ timeevent.e_after(3) } },
    ...
 }
 \end{verbatim}
 
 \subsubsection{Description}
-The \texttt{rfsm\_timeevent} module enables relative time
-events. After loading, a suitable \texttt{gettime} function must be
-set. This function returns two values: current seconds and current
-nanoseconds. Available functions: \texttt{rtp.clock\_gettime} (from
-the rtp module, see section \textit{Links}), \texttt{rtt.getTime} from RTT-Lua, or for
-second resolution events the Lua built-in:
+\texttt{e\_after(t[, id])} fires \texttt{t} seconds after the source
+state was entered, \texttt{e\_at(t[, id])} at the absolute time
+\texttt{t}. Instead of a number, \texttt{t} can be a function that
+returns the timeout and gets \texttt{id} passed. The old
+\texttt{"e\_after(3)"} string syntax still works.
+
+The \texttt{gettime} function returns the current time as a single
+value in nanoseconds, e.g.\ for second resolution events:
 \begin{verbatim}
-function gettime() return os.time(), 0 end
+function gettime() return os.time() * 1e9 end
 \end{verbatim}
 
 \textit{Note:} These timeevents only work for periodically triggered
-components.
+components, they can not wake up an idle fsm.
 
-\subsection{Sequential AND state}
+\subsection{More Extensions}
 
-\subsubsection{Synopsis}
+\begin{itemize}
+\item \texttt{rfsm.emem}: per state event memory: table
+  \texttt{emem} counts the events received while the state is active.
+\item \texttt{rfsm.await}: event \texttt{"await(e1, e2)"} triggers
+  the transition once both events were received, possibly in
+  different steps.
+\item \texttt{rfsm.checkevents}: warn about unknown events at runtime.
+  Load it after other event transforming extensions.
+\end{itemize}
+
+\subsection{Sequential AND state: \texttt{rfsm.ext}}
 
 \begin{verbatim}
-    seqAND = rfsm.seqand {
+    local ext = require("rfsm.ext")
+    seqAND = ext.seqand {
        subfsm1=rfsm.init(rfsm.load("subfsm1.lua")),
        subfsm2=...
     }
@@ -288,8 +322,9 @@ components.
 \subsubsection{Fields}
 
 \begin{itemize}
-\item \texttt{order}: table of substate names that indicate the desired execution order. Not mentioned states are executed last.
-\item \texttt{andseqdbg}: if true print debug info
+\item \texttt{order}: table of substate names that indicate the
+  desired execution order. Not mentioned states are executed last.
+\item \texttt{seqanddbg}: if true print debug info
 \item \texttt{step}: number of steps to advance each time.
 \item \texttt{run}: if true, don't step but \texttt{run}.
 \item \texttt{idle\_doo}: doo flag to be returned by seqand yield.
@@ -300,45 +335,45 @@ Specialized state that \texttt{step}'s or \texttt{run}'s the
 initialized substates in a serialized manner inside the \texttt{doo}
 function of the seqand state.
 
-\subsection{Complete Example}
+\section{Tools}
 
+\begin{itemize}
+\item \texttt{tools/rfsm-sim model.lua}: interactive simulator,
+  \texttt{help()} lists the commands.
+\item \texttt{tools/rfsm2plantuml model.lua}: write a PlantUML state
+  diagram \texttt{model.puml}.
+\item \texttt{tools/rfsm2json model.lua}: convert a model to JSON
+  (needs \texttt{lua-json}).
+\end{itemize}
+
+\section{Complete Example}
 \begin{verbatim}
-local state, trans, conn = rfsm.state, rfsm.conn, rfsm.trans
-return rfsm.state {
-   dbg=rfsmpp.gen_dbgcolor("sample-fsm")
+local rfsm = require("rfsm")
+local pp = require("rfsm.pp")
+local timeevent = require("rfsm.timeevent")
+local state, trans = rfsm.state, rfsm.trans
+return state {
+   dbg=pp.gen_dbgcolor("robot"),
    entry=function() enable_robot() end,
-   entry=function() disable_robot() end,
-
+   exit=function() disable_robot() end,
    stopped = state{},
-
    moving = state {
       entry=function() start_motor() end,
       exit=function() stop_motor() end,
-
-      doo = function()
-        while true do
-           compute_next_pos()
-           rfsm.yield(true)
-        end,
-   }
+      doo=function()
+         while true do
+            compute_next_pos()
+            rfsm.yield(true)
+         end
+      end,
+   },
    trans{ src="initial", tgt="stopped" },
    trans{ src="stopped", tgt="moving", events={"e_start"} },
-   trans{ src="moving", tgt="stopped", events={"e_stop"} },
+   trans{ src="moving", tgt="stopped",
+          events={"e_stop", timeevent.e_after(5)} },
 }
 \end{verbatim}
 
-\subsection{Links}
-\label{sec:links}
-
-\url{www.orocos.org/rfsm}
-\url{http://www.orocos.org/wiki/orocos/toolchain/LuaCookbook}
-\url{https://github.com/kmarkus/rtp}
-
-% You can even have references
-\rule{0.3\linewidth}{0.25pt}
-\scriptsize
-\bibliographystyle{abstract}
-\bibliography{refFile}
 \end{multicols}
 \end{document}
 
