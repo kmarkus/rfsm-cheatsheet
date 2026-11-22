@@ -4,8 +4,22 @@
 \usepackage{ifthen}
 \usepackage[landscape]{geometry}
 \usepackage{amsmath,amsthm,amsfonts,amssymb}
-\usepackage{color,graphicx,overpic}
-\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[varqu]{zi4}  % mono with a real bold for keywords
+\usepackage{xcolor,graphicx,overpic}
+\usepackage{listings}
+
+% print friendly: dark colors, plus bold/italic for grayscale printers
+\definecolor{kw}{HTML}{1F3A93}
+\definecolor{str}{HTML}{A31515}
+\definecolor{cmt}{HTML}{4F6F2F}
+\lstset{language={[5.1]Lua}, basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{kw}\bfseries, stringstyle=\color{str},
+  commentstyle=\color{cmt}, showstringspaces=false,
+  columns=fullflexible, keepspaces=true,
+  aboveskip=2pt, belowskip=2pt}
+\usepackage[hidelinks]{hyperref}
 \usepackage{fancyvrb}
 \usepackage{url}
 \usepackage{enumitem}
@@ -65,6 +79,7 @@
 \begin{document}
 \raggedright
 \scriptsize
+\raggedcolumns
 \begin{multicols}{3}
 
 
@@ -83,12 +98,12 @@
 
 \section{Specifying rFSM Models}
 
-\begin{verbatim}
+\begin{lstlisting}
     local rfsm = require("rfsm")
     return rfsm.state {
        ...
     }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Description}
 
@@ -116,7 +131,7 @@ The following fields may be defined in the toplevel state:
 
 States are the principal building block of rFSM Statecharts.
 
-\begin{verbatim}
+\begin{lstlisting}
     rfsm.state {
        entry=function() do_this() end,
        exit=function() do_that() end,
@@ -124,7 +139,7 @@ States are the principal building block of rFSM Statecharts.
        substate1=rfsm.state{...}, ...
        rfsm.trans{...}, ...
     }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Fields}
 
@@ -156,11 +171,11 @@ A plain \texttt{doo} runs once, then the completion event
 
 Transitions connect states.
 
-\begin{verbatim}
+\begin{lstlisting}
     rfsm.transition{ src="stateX", tgt="stateY",
                      events={"e_1", "e_2"} }
     rfsm.trans{ ... } -- short form
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Fields}
 
@@ -188,10 +203,10 @@ nested states by parent states using the relative notation.
 \subsection{Connectors}
 \label{sec:connectors}
 
-\begin{verbatim}
+\begin{lstlisting}
     rfsm.connector{}
     rfsm.conn{} -- short form
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Description}
 
@@ -256,22 +271,22 @@ Extensions are enabled by \texttt{require}-ing them alongside the model.
 
 Enable state entry and exit debug messages:
 
-\begin{verbatim}
+\begin{lstlisting}
 local pp = require("rfsm.pp")
 fsm.dbg = pp.gen_dbgcolor("fsmX",
                           { STATE_ENTER=true,
                             STATE_EXIT=true }, false)
-\end{verbatim}
+\end{lstlisting}
 \medskip
 Most important debug IDs are:
-\begin{verbatim}
+\begin{lstlisting}[language={}]
 STATE_ENTER, STATE_EXIT, EFFECT, DOO, EXEC_PATH,
 ERROR, HIBERNATING, RAISED, TIMEEVENT
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Time Events: \texttt{rfsm.timeevent}}
 
-\begin{verbatim}
+\begin{lstlisting}
 local timeevent = require("rfsm.timeevent")
 timeevent.set_gettime_hook(gettime)
 return rfsm.state {
@@ -279,7 +294,7 @@ return rfsm.state {
           events={ timeevent.e_after(3) } },
    ...
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Description}
 \texttt{e\_after(t[, id])} fires \texttt{t} seconds after the source
@@ -290,9 +305,9 @@ returns the timeout and gets \texttt{id} passed. The old
 
 The \texttt{gettime} function returns the current time as a single
 value in nanoseconds, e.g.\ for second resolution events:
-\begin{verbatim}
+\begin{lstlisting}
 function gettime() return os.time() * 1e9 end
-\end{verbatim}
+\end{lstlisting}
 
 \textit{Note:} These timeevents only work for periodically triggered
 components, they can not wake up an idle fsm.
@@ -311,13 +326,13 @@ components, they can not wake up an idle fsm.
 
 \subsection{Sequential AND state: \texttt{rfsm.ext}}
 
-\begin{verbatim}
+\begin{lstlisting}
     local ext = require("rfsm.ext")
     seqAND = ext.seqand {
        subfsm1=rfsm.init(rfsm.load("subfsm1.lua")),
        subfsm2=...
     }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Fields}
 
@@ -347,7 +362,7 @@ function of the seqand state.
 \end{itemize}
 
 \section{Complete Example}
-\begin{verbatim}
+\begin{lstlisting}
 local rfsm = require("rfsm")
 local pp = require("rfsm.pp")
 local timeevent = require("rfsm.timeevent")
@@ -372,7 +387,7 @@ return state {
    trans{ src="moving", tgt="stopped",
           events={"e_stop", timeevent.e_after(5)} },
 }
-\end{verbatim}
+\end{lstlisting}
 
 \end{multicols}
 \end{document}
